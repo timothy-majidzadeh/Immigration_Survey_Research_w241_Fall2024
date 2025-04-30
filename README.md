@@ -1,4 +1,4 @@
-# Immigration_Survey_Research_w241_Fall2024
+# MIDS w241 Fall 2024 Immigration Survey Research
 Survey research investigating the effect of social media framing on voters' survey opinions regarding immigration. 
  
 Created by [A. Drozd](https://www.linkedin.com/in/alice-drozd-38a258207/), [T. Majidzadeh](https://www.linkedin.com/in/timothy-majidzadeh/), [I. Vaimberg](https://www.linkedin.com/in/ian-vaimberg/), [E. Fleurant](https://www.linkedin.com/in/edwin-fleurant-85916b126/), and [L. Cartagena](https://www.linkedin.com/in/luiscartagena/).
