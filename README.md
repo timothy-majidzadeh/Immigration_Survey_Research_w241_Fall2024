@@ -1,2 +1,15 @@
 # Immigration_Survey_Research_w241_Fall2024
- Survey research investigating the effect of social media framing on voters' survey opinions regarding immigration. Created by  A. Drozd, T. Majidzadeh, I. Vaimberg, E. Fleurant, and L. Cartagena.
+Survey research investigating the effect of social media framing on voters' survey opinions regarding immigration. 
+ 
+Created by [A. Drozd](https://www.linkedin.com/in/alice-drozd-38a258207/), [T. Majidzadeh](https://www.linkedin.com/in/timothy-majidzadeh/), [I. Vaimberg](https://www.linkedin.com/in/ian-vaimberg/), [E. Fleurant](https://www.linkedin.com/in/edwin-fleurant-85916b126/), and [L. Cartagena](https://www.linkedin.com/in/luiscartagena/).
+
+We conduct a stratified random sample (N=200) of the U.S. population with equally-sized treatment and control groups. Each individual answers a 5-question survey regarding their opinions on immigration in the United States. 
+
+Treatment group individuals see the survey questions as images formatted to look like Facebook posts (such as in the image below), while control group individuals see only plain text statements with no social media formatting.
+
+![Treatment Group Question 1](/data/statement_images/statement1.png)
+
+
+In this way, we test whether social media cues and framing have an impact on Americans' self-reported political opinions. We find an increase in agreement levels for Democrats and Independents and a decrease in agreement levels for Republicans, although these effects are not statistically significant. For more detail, see our final report and presentation.
+
+We thank [Qualtrics](https://www.qualtrics.com/lp/experience-management/?utm_source=google&utm_medium=ppc&utm_campaign=USA-EN|SRC|BRD|Qualtrics&utm_content=Qualtrics&utm_term=qualtrics&utm_keyword=e&matchtype=e&device=c&creative=650821805036&gad_source=1&gad_campaignid=755409789&gbraid=0AAAAAD02ceZ2L1eiEWp7VB3W_s5Y20qou&gclid=Cj0KCQjwlMfABhCWARIsADGXdy--RDXAGTPeHwVszVCcLhcdV6rZ0HucqbyOe8BEeFBq40rTB9nc7dIaAh-yEALw_wcB) as our survey platform, [PureSpectrum](https://www.purespectrum.com/?utm_term=purespectrum&utm_campaign=Brand&utm_source=adwords&utm_medium=ppc&hsa_acc=8579716074&hsa_cam=10757994454&hsa_grp=104105057897&hsa_ad=600630266800&hsa_src=g&hsa_tgt=kwd-18430798751&hsa_kw=purespectrum&hsa_mt=b&hsa_net=adwords&hsa_ver=3&gad_source=1&gad_campaignid=10757994454&gbraid=0AAAAACQu5oU-lG-xTro4u7tKA1LJGw03k&gclid=Cj0KCQjwlMfABhCWARIsADGXdy8oxvgmhkbti7JCcsOv_KlOg8diY2dNu9Mz7XjFIUGakw9yWDH38sMaAlUcEALw_wcB) as our partner for collecting survey responses, our instructor [Scott Guenther](https://www.linkedin.com/in/scott-guenther-5b9aab89/), and the [UC Berkeley MIDS program](https://info.ischoolonline.berkeley.edu/requestinfo/mids/?x=OFB&lsrc=search_brand_google&l=GGL%7CUCB-Data%7CSEM%7CBRD%7CTIER0%7CGeneral%7COffline&ef_id=c:639787815295_d:c_n:g_ti:kwd-352720089283&gad_source=1&gad_campaignid=19166093953&gbraid=0AAAAADkDIyJJNAlXc99gDKltHq3mVGkCl&gclid=Cj0KCQjwlMfABhCWARIsADGXdy-tE0mQWalm2PPHnU4X5r-aUQudpQpketNlAvppI3SNmD0JY2d_DS0aAppOEALw_wcB&gclsrc=aw.ds).

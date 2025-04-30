@@ -1,0 +1,272 @@
+---
+title: "Power_Analysis"
+author: Timothy Majidzadeh, Luis Cartagena, Alice Drozd, Ian Vaimberg, Edwin Fleurant
+output: pdf_document
+date: "2024-10-06"
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+knitr::opts_chunk$set(echo = TRUE)
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(truncnorm)
+options(warn=-1)
+```
+
+## Power Analysis
+
+#### Design Recap
+
+Our experiment design is to partner with a survey delivery company (such as Qualtrics or a competitor) to randomly sample from the US population, then survey our sample regarding their agreement or disagreement with a series of statements about immigration. A randomly-selected treatment group will receive the statements styled to look like social media posts, and the control group will receive the statements in plain text. There will be 10 questions on the survey, and responders will rank their level of agreement from "Strongly Disagree" to "Strongly Agree" (-5 to 5). We will sum the values for the 10 questions, and t-test using the aggregate score (-50 to 50) to see if the treatment format affects responders' self-reported views on immigration.
+
+```{r sample_by_party, include=FALSE}
+
+truncnorm_scores <- function (party, sample_size, d_effect, r_effect, i_effect){
+  if (party == 'D')
+    return (round(rtruncnorm(sample_size, a=-5, b=5, mean=(d_baseline+d_effect), sd=sd)))
+  else if (party == 'R')
+    return (round(rtruncnorm(sample_size, a=-5, b=5, mean=(r_baseline+r_effect), sd=sd)))
+  else
+    return (round(rtruncnorm(sample_size, a=-5, b=5, mean=(i_baseline+i_effect), sd=sd)))
+}
+
+sample_by_party <- function (sample_size, scorefunc, treat=1, d_effect=d_eff, r_effect=r_eff, i_effect=i_eff) {
+  if (treat==0){
+    d_effect <- 0
+    r_effect <- 0
+    i_effect <- 0
+  }
+  table <- data.table(
+    party = sample(c('D', 'R', 'I'), size=sample_size, prob=c(pct_d, pct_r, pct_i), replace=TRUE),
+    treat = treat
+  )
+  
+  dems <- table[party=="D"]
+  reps <- table[party=="R"]
+  inds <- table[party=="I"]
+  
+  # The sampling distribution depends on the scenario & individual's party. Scores can't exceed (-5, 5) for one question.
+  for (i in 1:10){
+    if (nrow(dems) > 0){
+      dem_seq <- scorefunc("D", nrow(dems), d_effect, r_effect, i_effect)
+      dems[, c(sprintf("q%s", i)) := dem_seq]
+    }
+    
+    if (nrow(reps) > 0){
+      rep_seq <- scorefunc("R", nrow(reps), d_effect, r_effect, i_effect)
+      reps[, c(sprintf("q%s", i)) := rep_seq]
+    }
+    
+    if (nrow(inds) > 0){
+      ind_seq <- scorefunc("I", nrow(inds), d_effect, r_effect, i_effect)
+      inds[, c(sprintf("q%s", i)) := ind_seq]
+    }
+  }
+  if (exists("out") == FALSE){
+    if (nrow(dems) > 0){
+      out <- dems
+      if (nrow(reps) > 0) {
+        out <- rbind(out, reps)
+      }
+      if (nrow(inds) > 0) {
+        out <- rbind(out, inds)
+      }
+    }
+    else if (nrow(reps) > 0){
+      out <- reps
+      if (nrow(inds) > 0) {
+        out <- rbind(out, inds)
+      }
+    }
+    else{
+      out <- inds
+    }
+  }
+  out[,score:=rowSums(.SD), .SDcols=c("q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10")]
+  
+  return(out)
+}
+
+```
+
+```{r power, include=FALSE}
+
+# Function to simulate data and calculate power
+simulate_power <- function(sample_size, num_simulations, scorefunc=truncnorm_scores) {
+  
+  significant_results <- numeric(num_simulations)
+  
+  for (j in 1:num_simulations) {
+    if (j %% 50 == 0){
+      # print(j)
+    }
+    # Generate data for two groups
+    control_table <- sample_by_party(round(sample_size/2), scorefunc, treat=0)
+    treatment_table <- sample_by_party(round(sample_size/2), scorefunc, treat=1)
+    
+    control_group <- control_table$score
+    treatment_group <- treatment_table$score
+    
+    # Perform Wilcoxon rank-sum test
+    # test_result <- wilcox.test(control_group, treatment_group)
+    # T-test instead
+    test_result <- t.test(control_group, treatment_group)
+    significant_results[j] <- test_result$p.value < 0.05
+  }
+  
+  # Calculate power
+  power <- mean(significant_results)
+  return(power)
+}
+```
+
+
+```{r sequence, include=FALSE}
+
+get_power_sequence <- function(sample_sizes, n_sims, aggfunc, scen){
+  # Run simulations and collect power results
+  power_results <- data.frame(SampleSize = integer(), Scenario = integer(), Power = numeric())
+
+  for (size in sample_sizes) {
+    pwr <- simulate_power(size, n_sims, aggfunc)
+    power_results <- rbind(power_results, data.frame(SampleSize = size, Scenario = scen, Power = pwr))
+  }
+  return(power_results)
+}
+```
+
+#### Scenario 1: Unimodal, Uniform 4.3% Effect Size
+
+```{r scenario_1, warning=FALSE, include=FALSE}
+### Scenario 1: No Partisan Responses, Uniform Effect Size, Effect is 5% of total scale length, Truncated Normal Distribution
+
+d_baseline = 1.4 # need some data on the baselines
+r_baseline = 1.4 # Suppose everyone follows the national average: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_baseline = 1.4
+
+d_eff = 0.434 # need some data on the baselines
+r_eff = 0.434 # Suppose everyone follows the national average: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_eff = 0.434
+
+sd = 3
+
+pct_d = 0.30
+pct_r = 0.30 # Roughly equal partisan split: https://news.gallup.com/poll/15370/party-affiliation.aspx
+pct_i = 0.40
+
+sample_size = 50
+sample_sizes <- seq(25, 500, by = 25)
+n_sims = 1000
+
+scen_1_seq <- get_power_sequence(sample_sizes, n_sims, truncnorm_scores, 1)
+power <- scen_1_seq$Power[2]
+```
+
+According to [Gallup](https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx)^[Jeffrey M. Jones, "Sharply More Americans Want to Curb Immigration to U.S.", _Gallup_, July 12, 2024.], about 64% of Americans support the statement that "On the whole... immigration is a good thing for this country," while 32% oppose. Therefore, we suppose that the control group has a baseline score per question of `r d_baseline` on a scale from -5 to 5. We suppose that this follows a truncated normal distribution^[Mersmann, O., Trautmann, H., Steuer, D., and Bornkamp, B., "truncnorm: Truncated Normal Distribution," cran.r-project.org, available at [https://CRAN.R-project.org/package=truncnorm](https://CRAN.R-project.org/package=truncnorm)] on our scale, and round simulated values so that each question only has integer responses. For a normal distribution with mean `r d_baseline`, a standard deviation of `r sd` would mean that 32% of Americans fall below 0 and disagree with the sentiment, which is consistent with the Gallup poll.
+
+For our treatment effect, we turn to Williamson, Adida, Lo, Platas, Prather and Werfel (2021)^[Williamson, S., Adida, C., Lo A., Platas, M., Prather, L., and Werfel, S., "Family Matters: How Immigrant Histories Can Promote Inclusion", ("Williamson et al. 2021") _American Political Science Review_, 2021, Vol 115., No. 2., pp. 686-693.], who conducted a similar study regarding change in social attitudes towards immigrants following a 'priming' treatment. In one sensitivity, the authors found a treatment effect of `r d_eff * 10` on a 100-point scale.^[Williamson et al. 2021, Supplemental Information, Table D6.] We translate this to `r d_eff` per question on a 10-point scale, add this value to our treatment group's responses, and then conduct a power analysis with sample size `r sample_size` and `r n_sims` simulations for detection of this effect. This yields a power of `r power * 100`%.
+
+
+#### Scenario 2: Multimodal, Uniform 4.3% Effect Size
+
+```{r scenario_2, warning=FALSE, include=FALSE}
+
+d_baseline = 3.6 # need some data on the baselines
+r_baseline = -1.1 # Data is skewed towards opposition to immigration: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_baseline = 1.6
+
+d_eff = .434 # need some data on the baselines
+r_eff = .434 # Differing party splits, but still averages to 0.5: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_eff = .434
+
+sd = 3
+
+pct_d = 0.30
+pct_r = 0.30 # Roughly equal partisan split: https://news.gallup.com/poll/15370/party-affiliation.aspx
+pct_i = 0.40
+
+sample_size = 50
+sample_sizes <- seq(25, 500, by = 25)
+n_sims = 1000
+
+scen_2_seq <- get_power_sequence(sample_sizes, n_sims, truncnorm_scores, 2)
+power <- scen_2_seq$Power[2]
+```
+
+We add additional detail to the analysis by considering different baseline levels of support for Democrats, Republicans, and Independents. According to [Gallup](https://news.gallup.com/poll/15370/party-affiliation.aspx),^["Party Affiliation," Gallup.] the country is split `r pct_d * 100`-`r pct_r * 100`-`r pct_i * 100` between Democrats, Republicans, and Independents. Democrats support immigration at a rate of 86%, Republicans at 39%, and Independents at 66%. We translate this to baseline scores of `r d_baseline`, `r r_baseline`, and `r i_baseline`, keeping our other assumptions the same. Even with an equal effect size held uniform across all groups, the multimodal distribution reduced statistical power to `r power * 100`%.
+
+#### Scenario 3: Multimodal, Uniform 1.77% Effect Size
+
+```{r scenario_3, warning=FALSE, include=FALSE}
+
+d_baseline = 3.6 # need some data on the baselines
+r_baseline = -1.1 # Data is skewed towards opposition to immigration: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_baseline = 1.6
+
+d_eff = .177 # need some data on the baselines
+r_eff = .177 # Differing party splits, but still averages to 0.5: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_eff = .177
+
+sd = 3
+
+pct_d = 0.30
+pct_r = 0.30 # Roughly equal partisan split: https://news.gallup.com/poll/15370/party-affiliation.aspx
+pct_i = 0.40
+
+sample_size = 50
+sample_sizes <- seq(25, 500, by = 25)
+n_sims = 1000
+
+scen_3_seq <- get_power_sequence(sample_sizes, n_sims, truncnorm_scores, 3)
+power <- scen_3_seq$Power[2]
+
+```
+
+We consider the fact that our treatment effect may be smaller than above: an alternate survey design from Williamson et al. showed only a `r d_eff * 10`% treatment effect.^[Williamson et al. 2021, Supplemental Information, Table D6.] A multimodal distribution with a smaller effect size of +`r d_eff` has a power of only `r power * 100`%.
+
+
+#### Scenario 4: Multimodal, Non-Uniform Effect Sizes
+
+```{r scenario_4, warning=FALSE, include=FALSE}
+
+d_baseline = 3.6 # need some data on the baselines
+r_baseline = -1.1 # Data is skewed towards opposition to immigration: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_baseline = 1.6
+
+d_eff = .434 # need some data on the baselines
+r_eff = 0 # Differing party splits, but still averages to 0.5: https://news.gallup.com/poll/647123/sharply-americans-curb-immigration.aspx
+i_eff = .177
+
+sd = 3
+
+pct_d = 0.30
+pct_r = 0.30 # Roughly equal partisan split: https://news.gallup.com/poll/15370/party-affiliation.aspx
+pct_i = 0.40
+
+sample_size = 50
+sample_sizes <- seq(25, 500, by = 25)
+n_sims = 1000
+
+scen_4_seq <- get_power_sequence(sample_sizes, n_sims, truncnorm_scores, 4)
+power <- scen_4_seq$Power[2]
+
+```
+
+Our treatment is not exactly the same as Williamson et al.'s - they prime the treatment group with a question about the responders' own family immigration history,^[Williamson et al. 2021.] while we present the treatment group with social media posts made by pro-immigration actors. Because our treatment acts in part through in-group/out-group social effects, it may not have a uniform effect on Democrats, Republicans and Independents. If the treatment effect is +`r d_eff` for Democrats, +`r i_eff` for Independents, and 0.000 for Republicans, we have a power of `r power * 100`%.
+
+#### Plot of Power by Scenario and Sample Size
+
+Power scales with sample size. We consider power estimates using sample sizes from 25 individuals to 500 individuals in increments of 25. If the actual world resembles our multimodal or small-effect distributions, we will need sample sizes of 400 or more to achieve power over 50%, which would likely push our budget to the limit.
+
+```{r plot, echo=FALSE, fig.align='center'}
+power_results <- rbind(scen_1_seq, scen_2_seq, scen_3_seq, scen_4_seq)
+# Plot results
+ggplot(power_results, aes(x = SampleSize, y = Power, color = as.factor(Scenario))) +
+  geom_line() +
+  labs(title = "Power Analysis Simulations", x = "Sample Size", y = "Achieved Power") +
+  scale_color_discrete(name = "Scenario") +
+  scale_x_continuous(breaks=sample_sizes,labels=sample_sizes)+
+  theme_classic()
+```
